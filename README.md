@@ -125,3 +125,11 @@ Backend (DRF)
 - **必須**: `challenge` の削除/無効化（使い捨て）
 - **任意**: 最終ログイン時刻・IP・User-Agent などの監査ログ
 - **任意**: 失敗回数やロック状態（ブルートフォース対策）
+
+## シングルサインオン（SSO）を実現するには
+- **IdP を導入**（例: Keycloak / Auth0 / Azure AD / Okta）
+- **標準プロトコルを採用**: OAuth 2.0 / OpenID Connect を推奨（SAML も可）
+- **WebAuthn は IdP 側の認証手段として組み込む**  
+  各アプリは IdP 発行のトークン（ID/Access Token）を検証する
+- **セッション管理を統一**: 失効・更新（Refresh）・ログアウト連携
+- **アプリ間のユーザー識別子を統一**（sub/uid を基準にする）
