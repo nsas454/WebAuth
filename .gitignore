@@ -1,13 +1,37 @@
-# Nuxt dev/build outputs
-.output
-.data
-.nuxt
-.nitro
-.cache
-dist
+# Frontend (Nuxt)
+frontend/.output
+frontend/.data
+frontend/.nuxt
+frontend/.nitro
+frontend/.cache
+frontend/dist
+frontend/node_modules
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
-# Node dependencies
-node_modules
+# Backend (Django)
+backend/.venv
+backend/venv
+backend/env
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/**/*.pyc
+backend/db.sqlite3
+backend/staticfiles
+backend/media
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/.pytest_cache
+backend/.mypy_cache
+backend/.ruff_cache
+
+# Build artifacts
+*.egg-info/
+build/
+dist/
 
 # Logs
 logs
@@ -17,8 +41,3 @@ logs
 .DS_Store
 .fleet
 .idea
-
-# Local env files
-.env
-.env.*
-!.env.example
