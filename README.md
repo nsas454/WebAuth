@@ -48,6 +48,10 @@ npm run dev
 ## WebAuthn の前提
 - WebAuthn は HTTPS または `localhost` でのみ有効です
 - `WEBAUTHN_ORIGIN` / `WEBAUTHN_RP_ID` が実環境と一致している必要があります
+- **注意**: `WEBAUTHN_ORIGIN` はスキーム/ホスト/ポートまで一致が必要、`WEBAUTHN_RP_ID` はホスト名のみを設定します
+- **記述例**:
+  - 開発: `WEBAUTHN_ORIGIN=http://localhost:3000` / `WEBAUTHN_RP_ID=localhost`
+  - 本番: `WEBAUTHN_ORIGIN=https://example.com` / `WEBAUTHN_RP_ID=example.com`
 
 ## 設定（環境変数）
 - `WEBAUTHN_RP_ID`（例: `localhost`）
