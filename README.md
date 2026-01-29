@@ -133,3 +133,25 @@ Backend (DRF)
   各アプリは IdP 発行のトークン（ID/Access Token）を検証する
 - **セッション管理を統一**: 失効・更新（Refresh）・ログアウト連携
 - **アプリ間のユーザー識別子を統一**（sub/uid を基準にする）
+
+## 標準的なSSO構成（詳細）
+推奨は **OIDC Authorization Code + PKCE** です。  
+IdP は自分のドメインでセッション Cookie を持ち、アプリ側は `code` を交換してトークンを取得します。
+
+### 1) ログイン開始〜認可コード取得
+1. アプリ → IdP にリダイレクト  
+   `response_type=code`, `client_id`, `redirect_uri`, `scope=openid profile`, `code_challenge`
+2. IdP で認証（パスワード/MFA/WebAuthnなど）  
+   認証結果は **IdP ドメインの HttpOnly Cookie** に保存
+3. IdP → アプリへ **`code` を付与してリダイレクト**
+
+### 2) トークン交換〜アプリのセッション確立
+4. アプリのバックエンドが IdP に `code` を送信（PKCE の `code_verifier` を添付）
+5. IdP が **ID Token / Access Token / Refresh Token** を発行
+6. アプリ側で **自前セッションCookieを発行**（またはトークン検証のみで運用）
+
+### 3) 推奨される実装ポイント
+- **トークンをURLに載せてリダイレクトしない**（`code` を使う）
+- **IdP の Cookie とアプリの Cookie は分離**（ドメイン別に管理）
+- **トークン検証はサーバー側**（公開鍵/JWKSで署名検証）
+- **ログアウト連携**（IdPのセッション失効とアプリのセッション破棄）
