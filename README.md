@@ -54,3 +54,50 @@ npm run dev
 - `WEBAUTHN_RP_NAME`（例: `Labo Auth`）
 - `WEBAUTHN_ORIGIN`（例: `http://localhost:3000`）
 - `NUXT_PUBLIC_WEBAUTHN_API_BASE`（例: `http://localhost:8000`）
+
+## 内部処理の流れ（図解）
+
+### 登録（Attestation）
+```
+ユーザー
+  │ 1) 登録開始
+  ▼
+Frontend (Nuxt)
+  │ 2) /register/options
+  ▼
+Backend (DRF)
+  │ challenge生成・保存
+  │ publicKeyOptions返却
+  ▼
+Frontend (Nuxt)
+  │ navigator.credentials.create()
+  │ 3) /register/verify (attestation送信)
+  ▼
+Backend (DRF)
+  │ clientDataJSON/challenge/origin検証
+  │ 公開鍵・credentialId・signCount保存
+  ▼
+完了
+```
+
+### ログイン（Assertion）
+```
+ユーザー
+  │ 1) ログイン開始
+  ▼
+Frontend (Nuxt)
+  │ 2) /login/options
+  ▼
+Backend (DRF)
+  │ challenge生成・保存
+  │ allowCredentials返却
+  ▼
+Frontend (Nuxt)
+  │ navigator.credentials.get()
+  │ 3) /login/verify (assertion送信)
+  ▼
+Backend (DRF)
+  │ signature検証・signCount更新
+  ▼
+ログイン成功
+```
