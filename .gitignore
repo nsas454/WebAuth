@@ -41,3 +41,6 @@ logs
 .DS_Store
 .fleet
 .idea
+
+# 研修用資料（Git管理外）
+研修用資料_WebAuthnデモアプリ.md
