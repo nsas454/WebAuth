@@ -1,4 +1,28 @@
+# ============================================
+# 環境に依存するファイル（Git管理外）
+# ============================================
+# ローカル環境変数
+.env
+.env.*
+!.env.example
+*.local
+# Python 仮想環境・バージョン
+.venv
+venv
+env
+.python-version
+# DB・メディア・ログ（環境ごとに異なる）
+**/db.sqlite3
+**/staticfiles/
+**/media/
+*.log
+logs/
+# Node（frontend）
+node_modules/
+
+# ============================================
 # Frontend (Nuxt)
+# ============================================
 frontend/.output
 frontend/.data
 frontend/.nuxt
@@ -10,7 +34,9 @@ frontend/.env
 frontend/.env.*
 !frontend/.env.example
 
+# ============================================
 # Backend (Django)
+# ============================================
 backend/.venv
 backend/venv
 backend/env

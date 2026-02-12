@@ -2,9 +2,11 @@
 
 ## セットアップ（ローカル）
 
+**要約: Python 3.10 以上**（Django 5.x のため）。pyenv 利用時は `python3.12 -m venv .venv` などで作成してください。
+
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver 8000

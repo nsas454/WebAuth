@@ -19,12 +19,28 @@ from webauthn.helpers.structs import (
     AttestationConveyancePreference,
     AuthenticatorAttachment,
     AuthenticatorSelectionCriteria,
+    AuthenticatorTransport,
     PublicKeyCredentialDescriptor,
+    PublicKeyCredentialType,
     ResidentKeyRequirement,
     UserVerificationRequirement,
 )
 
 from .models import WebAuthnChallenge, WebAuthnCredential, WebAuthnUser
+
+_VALID_TRANSPORTS = {e.value: e for e in AuthenticatorTransport}
+
+
+def _to_transport_enums(transports):
+    """DB に保存された文字列（または文字列のリスト）を AuthenticatorTransport のリストに変換する。"""
+    if transports is None:
+        return None
+    if isinstance(transports, str):
+        transports = [transports]
+    if not transports:
+        return None
+    out = [_VALID_TRANSPORTS[t] for t in transports if isinstance(t, str) and t in _VALID_TRANSPORTS]
+    return out if out else None
 
 
 def _get_username(request):
@@ -62,7 +78,11 @@ class RegisterOptionsView(APIView):
 
         user, profile = _get_or_create_user(username)
         exclude_credentials = [
-            PublicKeyCredentialDescriptor(id=cred.credential_id, transports=cred.transports or None)
+            PublicKeyCredentialDescriptor(
+                id=cred.credential_id,
+                type=PublicKeyCredentialType.PUBLIC_KEY,
+                transports=_to_transport_enums(cred.transports),
+            )
             for cred in WebAuthnCredential.objects.filter(user=user)
         ]
 
@@ -150,7 +170,11 @@ class LoginOptionsView(APIView):
             return Response({"error": "credential not found"}, status=status.HTTP_404_NOT_FOUND)
 
         allow_credentials = [
-            PublicKeyCredentialDescriptor(id=cred.credential_id, transports=cred.transports or None)
+            PublicKeyCredentialDescriptor(
+                id=cred.credential_id,
+                type=PublicKeyCredentialType.PUBLIC_KEY,
+                transports=_to_transport_enums(cred.transports),
+            )
             for cred in credentials
         ]
 
