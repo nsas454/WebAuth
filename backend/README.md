@@ -12,6 +12,14 @@ python manage.py migrate
 python manage.py runserver 8000
 ```
 
+同一 LAN のスマホから **localhost:8000** に届ける場合は、すべてのインターフェースで待ち受けます。
+
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
+
+→ スマホからは `http://<PCのIP>:8000` で API にアクセスできます。ルートの README「スマホ・Bluetooth（BLE）で認証する」を参照してください。
+
 ## Admin 画面
 ```bash
 python manage.py createsuperuser

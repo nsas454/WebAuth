@@ -4,9 +4,10 @@ Nuxt をフロントエンド、Django REST Framework をバックエンドに�
 登録（Attestation）と認証（Assertion）の両方をサーバー側で検証します。
 
 ## 機能
-- パスキー登録（プラットフォーム認証器優先）
-- パスキー認証（サーバー側検証）
-- Touch ID 利用可否の判定表示
+- パスキー登録・認証（サーバー側検証）
+- **スマホ・Bluetooth（BLE）を認証機として利用可能**（プラットフォーム認証器に限定しない）
+- ディスカバラブル認証情報（resident key）対応で、他デバイスから「パスキーでサインイン」可能
+- Touch ID / 認証機利用可否の表示
 - 登録ユーザーの記憶（ローカル保存）
 
 ## 技術構成
@@ -62,9 +63,56 @@ npm run dev
 
 ## スマホ・Bluetooth（BLE）で認証する
 
-スマホでパスキー認証や Bluetooth（BLE）対応の認証デバイスを使うには、**HTTPS** が必要です（WebAuthn の仕様）。ローカル開発では ngrok などで HTTPS の URL を用意します。
+スマホでパスキー認証や Bluetooth（BLE）対応の認証デバイスを使うには、**HTTPS** が必要です（WebAuthn の仕様）。  
+ここでは **スマホのフロントから、PC で動かしている Backend（localhost:8000）と連携する** 2 パターンを説明します。
 
-### 手順（ngrok の場合）
+---
+
+### パターン1: スマホ × PC の localhost:8000（同一 LAN）
+
+Backend は PC の **localhost:8000** のまま動かし、スマホは同一 Wi‑Fi から PC の IP で API にアクセスします。フロントだけ ngrok で HTTPS にします。
+
+1. **PC の LAN IP を確認**  
+   例: `192.168.1.10`（`ifconfig` / `ipconfig` で確認）
+
+2. **フロントエンド用に ngrok でポート 3000 を公開**
+   ```bash
+   ngrok http 3000
+   ```
+   → 表示された HTTPS のホスト名を控える（例: `abc123.ngrok-free.app`）
+
+3. **Backend を「すべてのインターフェース」で起動（localhost:8000 のまま）**
+   ```bash
+   cd backend
+   source .venv/bin/activate
+   python manage.py runserver 0.0.0.0:8000
+   ```
+   → PC の `localhost:8000` が同一 LAN 内のスマホから `http://<PCのIP>:8000` で届くようにします。
+
+4. **Backend の環境変数**（`backend/.env`）
+   ```bash
+   WEBAUTHN_RP_ID=abc123.ngrok-free.app
+   WEBAUTHN_ORIGIN=https://abc123.ngrok-free.app
+   ALLOWED_HOSTS_EXTRA=192.168.1.10
+   CORS_EXTRA_ORIGINS=https://abc123.ngrok-free.app
+   ```
+   → `ALLOWED_HOSTS_EXTRA` は **PC の LAN IP**（手順1で確認した値）に合わせてください。
+
+5. **Frontend の環境変数（スマホから API を叩くとき）**  
+   スマホのブラウザからは「PC の localhost」に届かないので、**API のベース URL を PC の IP にします**。
+   ```bash
+   NUXT_PUBLIC_WEBAUTHN_API_BASE=http://192.168.1.10:8000
+   ```
+   → `192.168.1.10` は手順1の PC の LAN IP に合わせてください。  
+   → この状態で `npm run dev` を実行し、フロントは ngrok で公開された HTTPS の URL で開きます。
+
+6. **スマホでアクセス**  
+   スマホを同じ Wi‑Fi に繋ぎ、ブラウザで `https://abc123.ngrok-free.app` を開きます。  
+   → フロントは ngrok（HTTPS）、API は PC の **localhost:8000**（= `http://<PCのIP>:8000`）と連携し、スマホの生体認証や BLE で登録・ログインできます。
+
+---
+
+### パターン2: フロント・バックともに ngrok（2 本トンネル）
 
 1. **ngrok をインストール**  
    [ngrok](https://ngrok.com/) でアカウント取得後、フロント用・バックエンド用の 2 本のトンネルを張ります。
@@ -103,9 +151,12 @@ npm run dev
    - スマホ内蔵の生体認証（Touch ID / 顔認証など）や、Bluetooth（BLE）の認証デバイスが利用可能です。
    - 本アプリは認証器の種類を限定していないため、BLE トランスポートもそのまま利用できます。
 
+---
+
 ### 補足
 - 登録時に「このサイトではデバイスが利用できません」と出る場合は、**HTTPS** と **WEBAUTHN_ORIGIN / WEBAUTHN_RP_ID** がフロントの URL と一致しているか確認してください。
 - BLE の認証キーを使う場合は、端末の Bluetooth をオンにし、キーがペアリング済みである必要があります。
+- **パターン1** では Backend はあくまで PC の **localhost:8000** で動作し、スマホからは `http://<PCのIP>:8000` でそのまま連携します。
 
 ## 内部処理の流れ（図解）
 

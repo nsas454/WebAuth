@@ -17,7 +17,6 @@ from webauthn import (
 )
 from webauthn.helpers.structs import (
     AttestationConveyancePreference,
-    AuthenticatorAttachment,
     AuthenticatorSelectionCriteria,
     AuthenticatorTransport,
     PublicKeyCredentialDescriptor,
@@ -96,8 +95,10 @@ class RegisterOptionsView(APIView):
             challenge=challenge,
             attestation=AttestationConveyancePreference.NONE,
             authenticator_selection=AuthenticatorSelectionCriteria(
-                authenticator_attachment=AuthenticatorAttachment.PLATFORM,
-                resident_key=ResidentKeyRequirement.PREFERRED,
+                # 未指定: スマホ・Bluetooth(BLE)・USBキー等を認証機として利用可能に
+                authenticator_attachment=None,
+                # ディスカバラブル認証情報: 他デバイス（スマホ等）から「パスキーでサインイン」で利用可能
+                resident_key=ResidentKeyRequirement.REQUIRED,
             ),
             exclude_credentials=exclude_credentials,
         )

@@ -4,7 +4,7 @@
       <header class="card__header">
         <h1>WebAuthn ログイン</h1>
         <p class="muted">
-          パスキー / 生体認証によるログイン画面です。Django REST Framework で検証します。
+          パスキー / 生体認証によるログインです。スマホ・Bluetooth（BLE）認証機も利用できます。
         </p>
       </header>
 
@@ -34,7 +34,7 @@
 
       <div class="meta">
         <p>WebAuthn 対応: <strong>{{ isSupported ? "はい" : "いいえ" }}</strong></p>
-        <p>プラットフォーム認証器: <strong>{{ platformLabel }}</strong></p>
+        <p>認証機（Touch ID / スマホ・BLE）: <strong>{{ platformLabel }}</strong></p>
         <p>API: <strong>{{ apiBase }}</strong></p>
         <p>入力中ユーザー: <strong>{{ storedUserName || username || "未入力" }}</strong></p>
         <p>最終ログイン: <strong>{{ lastLoginAt || "なし" }}</strong></p>
@@ -172,13 +172,8 @@ const handleRegister = async () => {
     setStatus("このブラウザは WebAuthn に対応していません。", "error")
     return
   }
-  if (!isPlatformAuthenticatorAvailable.value) {
-    setStatus("プラットフォーム認証器が利用できません。Touch ID を確認してください。", "error")
-    return
-  }
-
   isLoading.value = true
-  setStatus("パスキーを登録しています…", "info")
+  setStatus("パスキーを登録しています…（スマホ・Bluetooth 認証機も利用可）", "info")
   try {
     const trimmed = username.value.trim()
     const optionsResponse = await postJson<{ publicKey: any }>(
@@ -230,13 +225,9 @@ const handleLogin = async () => {
     setStatus("このブラウザは WebAuthn に対応していません。", "error")
     return
   }
-  if (!isPlatformAuthenticatorAvailable.value) {
-    setStatus("プラットフォーム認証器が利用できません。Touch ID を確認してください。", "error")
-    return
-  }
 
   isLoading.value = true
-  setStatus("パスキーで認証しています…", "info")
+  setStatus("パスキーで認証しています…（スマホ・Bluetooth 認証機も利用可）", "info")
   try {
     const trimmed = username.value.trim()
     const optionsResponse = await postJson<{ publicKey: any }>(
@@ -246,6 +237,7 @@ const handleLogin = async () => {
     const publicKey = normalizeRequestOptions(optionsResponse.publicKey)
     const credential = (await navigator.credentials.get({
       publicKey,
+      mediation: "optional",
     })) as PublicKeyCredential | null
 
     if (!credential) {
