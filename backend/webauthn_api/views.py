@@ -2,6 +2,7 @@ import json
 import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import status
@@ -15,6 +16,7 @@ from webauthn import (
     verify_authentication_response,
     verify_registration_response,
 )
+from webauthn.helpers import bytes_to_base64url
 from webauthn.helpers.structs import (
     AttestationConveyancePreference,
     AuthenticatorSelectionCriteria,
@@ -238,3 +240,84 @@ class LoginVerifyView(APIView):
         challenge_record.delete()
 
         return Response({"status": "ok"})
+
+
+# ディスカバラブル認証用（PCに認証機がなくてもスマホ等を選べる）
+DISCOVERABLE_CACHE_PREFIX = "webauthn_disc_challenge:"
+DISCOVERABLE_CACHE_TIMEOUT = 300
+
+
+class LoginOptionsDiscoverableView(APIView):
+    """ユーザー名不要。allow_credentials を返さず、ブラウザが全パスキー（スマホ含む）を提示する。"""
+
+    def post(self, request):
+        challenge = secrets.token_bytes(32)
+        options = generate_authentication_options(
+            rp_id=settings.WEBAUTHN_RP_ID,
+            challenge=challenge,
+            allow_credentials=None,
+            user_verification=UserVerificationRequirement.REQUIRED,
+        )
+        key = DISCOVERABLE_CACHE_PREFIX + bytes_to_base64url(challenge)
+        cache.set(key, challenge, DISCOVERABLE_CACHE_TIMEOUT)
+        public_key = json.loads(options_to_json(options))
+        return Response({"publicKey": public_key})
+
+
+class LoginVerifyDiscoverableView(APIView):
+    """assertion のみ受け取り、userHandle でユーザーを特定して検証。"""
+
+    def post(self, request):
+        credential = request.data.get("credential")
+        if not credential:
+            return Response({"error": "credential is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_id = credential.get("rawId") or credential.get("id")
+        if not raw_id:
+            return Response({"error": "credential id missing"}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = credential.get("response") or {}
+        client_data_b64 = response.get("clientDataJSON")
+        if not client_data_b64:
+            return Response({"error": "clientDataJSON missing"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            client_data_bytes = base64url_to_bytes(client_data_b64)
+            client_data = json.loads(client_data_bytes.decode("utf-8"))
+            challenge_b64 = client_data.get("challenge")
+        except Exception as exc:
+            return Response({"error": f"invalid clientDataJSON: {exc}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not challenge_b64:
+            return Response({"error": "challenge missing in clientDataJSON"}, status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key = DISCOVERABLE_CACHE_PREFIX + challenge_b64
+        expected_challenge = cache.get(cache_key)
+        if not expected_challenge:
+            return Response({"error": "challenge expired or invalid"}, status=status.HTTP_400_BAD_REQUEST)
+
+        credential_id = base64url_to_bytes(raw_id)
+        try:
+            stored = WebAuthnCredential.objects.get(credential_id=credential_id)
+        except WebAuthnCredential.DoesNotExist:
+            cache.delete(cache_key)
+            return Response({"error": "credential not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            verification = verify_authentication_response(
+                credential=credential,
+                expected_challenge=expected_challenge,
+                expected_rp_id=settings.WEBAUTHN_RP_ID,
+                expected_origin=settings.WEBAUTHN_ORIGIN,
+                credential_public_key=stored.public_key,
+                credential_current_sign_count=stored.sign_count,
+                require_user_verification=True,
+            )
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        cache.delete(cache_key)
+        stored.sign_count = verification.new_sign_count
+        stored.save(update_fields=["sign_count"])
+
+        return Response({"status": "ok", "username": stored.user.username})

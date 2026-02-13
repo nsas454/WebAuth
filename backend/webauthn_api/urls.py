@@ -4,6 +4,8 @@ from .views import (
     RegisterVerifyView,
     LoginOptionsView,
     LoginVerifyView,
+    LoginOptionsDiscoverableView,
+    LoginVerifyDiscoverableView,
 )
 
 urlpatterns = [
@@ -11,4 +13,6 @@ urlpatterns = [
     path("register/verify", RegisterVerifyView.as_view()),
     path("login/options", LoginOptionsView.as_view()),
     path("login/verify", LoginVerifyView.as_view()),
+    path("login/options/discoverable", LoginOptionsDiscoverableView.as_view()),
+    path("login/verify/discoverable", LoginVerifyDiscoverableView.as_view()),
 ]

@@ -6,6 +6,7 @@ Nuxt をフロントエンド、Django REST Framework をバックエンドに�
 ## 機能
 - パスキー登録・認証（サーバー側検証）
 - **スマホ・Bluetooth（BLE）を認証機として利用可能**（プラットフォーム認証器に限定しない）
+- **PC に認証機がなくてもスマホを認証機として利用可能**（「デバイスからパスキーを選ぶ」＝ディスカバラブル認証）
 - ディスカバラブル認証情報（resident key）対応で、他デバイスから「パスキーでサインイン」可能
 - Touch ID / 認証機利用可否の表示
 - 登録ユーザーの記憶（ローカル保存）
@@ -25,6 +26,10 @@ Nuxt をフロントエンド、Django REST Framework をバックエンドに�
   認証用 `publicKey` を発行
 - `POST /api/webauthn/login/verify`  
   Assertion を検証し、signCount を更新
+- `POST /api/webauthn/login/options/discoverable`  
+  ユーザー名不要で認証用 options を発行（allow_credentials なし → ブラウザが全パスキーを提示）
+- `POST /api/webauthn/login/verify/discoverable`  
+  assertion のみで検証し、userHandle からユーザーを特定して `username` を返す
 
 ## ローカル起動
 

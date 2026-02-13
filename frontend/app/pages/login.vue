@@ -28,7 +28,14 @@
           パスキーを登録
         </button>
         <button class="secondary" :disabled="!canLogin" @click="handleLogin">
-          パスキーでログイン
+          パスキーでログイン（ユーザー名で）
+        </button>
+        <button
+          class="secondary discoverable"
+          :disabled="!isSupported || isLoading"
+          @click="handleLoginDiscoverable"
+        >
+          デバイスからパスキーを選ぶ（PCに認証機がなくてもスマホ可）
         </button>
       </div>
 
@@ -280,6 +287,69 @@ const handleLogin = async () => {
   }
 }
 
+/** PCに認証機がなくても、スマホ等を認証機として選べる（ユーザー名不要） */
+const handleLoginDiscoverable = async () => {
+  if (!import.meta.client) return
+  if (!isSupported.value) {
+    setStatus("このブラウザは WebAuthn に対応していません。", "error")
+    return
+  }
+
+  isLoading.value = true
+  setStatus("デバイスからパスキーを選んでください…（スマホ・Bluetooth 可）", "info")
+  try {
+    const optionsResponse = await postJson<{ publicKey: any }>(
+      "/api/webauthn/login/options/discoverable",
+      {},
+    )
+    const publicKey = normalizeRequestOptions(optionsResponse.publicKey)
+    const credential = (await navigator.credentials.get({
+      publicKey,
+      mediation: "conditional",
+    })) as PublicKeyCredential | null
+
+    if (!credential) {
+      setStatus("認証がキャンセルされました。", "error")
+      return
+    }
+
+    const assertionResponse = credential.response as AuthenticatorAssertionResponse
+    const credentialJson = {
+      id: credential.id,
+      rawId: toBase64Url(credential.rawId),
+      type: credential.type,
+      response: {
+        authenticatorData: toBase64Url(assertionResponse.authenticatorData),
+        clientDataJSON: toBase64Url(assertionResponse.clientDataJSON),
+        signature: toBase64Url(assertionResponse.signature),
+        userHandle: assertionResponse.userHandle
+          ? toBase64Url(assertionResponse.userHandle)
+          : null,
+      },
+      clientExtensionResults: credential.getClientExtensionResults?.() ?? {},
+      authenticatorAttachment: credential.authenticatorAttachment ?? null,
+    }
+
+    const result = await postJson<{ username: string }>(
+      "/api/webauthn/login/verify/discoverable",
+      { credential: credentialJson },
+    )
+
+    const loggedInUsername = result.username || "unknown"
+    const timestamp = new Date().toLocaleString("ja-JP")
+    lastLoginAt.value = timestamp
+    localStorage.setItem("webauthn.lastLoginAt", timestamp)
+    persistUserName(loggedInUsername)
+    username.value = loggedInUsername
+    setStatus(`認証成功: ${loggedInUsername}（デバイスから選択）`, "success")
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "認証に失敗しました。"
+    setStatus(message, "error")
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const clearStoredCredential = () => {
   if (!import.meta.client) return
   localStorage.removeItem("webauthn.userName")
@@ -380,6 +450,11 @@ button:disabled {
 .secondary {
   background: #e0e7ff;
   color: #312e81;
+}
+
+.secondary.discoverable {
+  background: #ecfdf5;
+  color: #065f46;
 }
 
 .text {
