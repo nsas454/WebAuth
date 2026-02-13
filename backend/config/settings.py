@@ -9,10 +9,14 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
 
+def _split_strip(s: str):
+    return [x.strip() for x in s.split(",") if x.strip()]
+
+
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-]
+] + _split_strip(os.environ.get("ALLOWED_HOSTS_EXTRA", ""))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -83,7 +87,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-]
+] + _split_strip(os.environ.get("CORS_EXTRA_ORIGINS", ""))
 
 WEBAUTHN_RP_ID = os.environ.get("WEBAUTHN_RP_ID", "localhost")
 WEBAUTHN_RP_NAME = os.environ.get("WEBAUTHN_RP_NAME", "Labo Auth")

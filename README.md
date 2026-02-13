@@ -58,6 +58,54 @@ npm run dev
 - `WEBAUTHN_RP_NAME`（例: `Labo Auth`）
 - `WEBAUTHN_ORIGIN`（例: `http://localhost:3000`）
 - `NUXT_PUBLIC_WEBAUTHN_API_BASE`（例: `http://localhost:8000`）
+- スマホ/ngrok 用（任意）: `ALLOWED_HOSTS_EXTRA`（カンマ区切り）, `CORS_EXTRA_ORIGINS`（カンマ区切り）
+
+## スマホ・Bluetooth（BLE）で認証する
+
+スマホでパスキー認証や Bluetooth（BLE）対応の認証デバイスを使うには、**HTTPS** が必要です（WebAuthn の仕様）。ローカル開発では ngrok などで HTTPS の URL を用意します。
+
+### 手順（ngrok の場合）
+
+1. **ngrok をインストール**  
+   [ngrok](https://ngrok.com/) でアカウント取得後、フロント用・バックエンド用の 2 本のトンネルを張ります。
+
+2. **フロントエンド用トンネル（例: ポート 3000）**
+   ```bash
+   ngrok http 3000
+   ```
+   → 表示された HTTPS のホスト名を控える（例: `abc123.ngrok-free.app`）
+
+3. **バックエンド用トンネル（例: ポート 8000）**
+   ```bash
+   ngrok http 8000
+   ```
+   → 表示された HTTPS のホスト名を控える（例: `def456.ngrok-free.app`）
+
+4. **Backend の環境変数**（`backend/.env`）
+   ```bash
+   WEBAUTHN_RP_ID=abc123.ngrok-free.app
+   WEBAUTHN_ORIGIN=https://abc123.ngrok-free.app
+   ALLOWED_HOSTS_EXTRA=def456.ngrok-free.app,abc123.ngrok-free.app
+   CORS_EXTRA_ORIGINS=https://abc123.ngrok-free.app
+   ```
+   - `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` は **フロントの HTTPS のホスト** に合わせます。
+   - `ALLOWED_HOSTS_EXTRA` にフロント・バックの ngrok ホストをカンマ区切りで指定します。
+   - `CORS_EXTRA_ORIGINS` にフロントの Origin（`https://フロントのホスト`）を指定します。
+
+5. **Frontend の環境変数**
+   ```bash
+   NUXT_PUBLIC_WEBAUTHN_API_BASE=https://def456.ngrok-free.app
+   ```
+   → バックエンドの ngrok URL を指定して `npm run dev` を実行します。
+
+6. **スマホでアクセス**  
+   スマホのブラウザで `https://abc123.ngrok-free.app` を開き、登録・ログインを試します。
+   - スマホ内蔵の生体認証（Touch ID / 顔認証など）や、Bluetooth（BLE）の認証デバイスが利用可能です。
+   - 本アプリは認証器の種類を限定していないため、BLE トランスポートもそのまま利用できます。
+
+### 補足
+- 登録時に「このサイトではデバイスが利用できません」と出る場合は、**HTTPS** と **WEBAUTHN_ORIGIN / WEBAUTHN_RP_ID** がフロントの URL と一致しているか確認してください。
+- BLE の認証キーを使う場合は、端末の Bluetooth をオンにし、キーがペアリング済みである必要があります。
 
 ## 内部処理の流れ（図解）
 
